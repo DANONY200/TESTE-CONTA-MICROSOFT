@@ -7,20 +7,24 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const PROXY_URL = 'https://api.allorigins.win/raw?url=';
     const MOJANG_AUTH_URL = 'https://authserver.mojang.com/authenticate';
-    const CHECK_DELAY = 1000; // Delay de 1 segundo entre as checagens
+    const CHECK_DELAY = 1000;
 
     let isChecking = false;
 
     async function fetchViaProxy(url, options) {
         const proxyRequestUrl = `${PROXY_URL}${encodeURIComponent(url)}`;
         try {
-            const response = await fetch(proxyRequestUrl, options);
-            if (response.status === 429) { // Too Many Requests - o proxy pode estar sobrecarregado
-                throw new Error("Proxy sobrecarregado. Tente novamente mais tarde.");
-            }
+            // Adiciona um timeout para a requisição, para não ficar preso indefinidamente
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos de timeout
+
+            const response = await fetch(proxyRequestUrl, { ...options, signal: controller.signal });
+            clearTimeout(timeoutId);
+
             return response;
         } catch (error) {
-            throw new Error(`Erro de rede ou no proxy: ${error.message}`);
+            // Trata erros de rede como "Load failed"
+            throw new Error(`Erro de rede ou proxy indisponível.`);
         }
     }
 
@@ -38,6 +42,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
             });
+            
+            // Se o proxy está sobrecarregado, ele pode retornar 429
+            if (response.status === 429) {
+                 return { sucesso: false, mensagem: `❌ Falha: O proxy (allorigins) está sobrecarregado. Tente mais tarde.` };
+            }
 
             const text = await response.text();
             let data;
@@ -45,7 +54,8 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 data = JSON.parse(text);
             } catch {
-                return { sucesso: false, mensagem: `❌ Falha: A API da Mojang respondeu com um formato inesperado.` };
+                // Se a resposta não for JSON, pode ser uma página de erro do proxy ou da Mojang
+                return { sucesso: false, mensagem: `❌ Falha: A API retornou uma resposta inesperada (não-JSON).` };
             }
 
             if (data.selectedProfile) {
@@ -54,10 +64,12 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (data.error === "ForbiddenOperationException") {
                 return { sucesso: false, mensagem: `❌ Falha: Credenciais inválidas (e-mail ou senha incorretos).` };
             } else {
-                return { sucesso: false, mensagem: `❌ Falha: ${data.errorMessage || 'Erro desconhecido'}` };
+                // **MELHORIA PRINCIPAL:** Mostra a mensagem de erro exata da Mojang
+                const mojangError = data.errorMessage || JSON.stringify(data);
+                return { sucesso: false, mensagem: `❌ Falha: ${mojangError}` };
             }
         } catch (error) {
-            return { sucesso: false, mensagem: `❌ Erro de conexão: ${error.message}` };
+            return { sucesso: false, mensagem: `❌ ${error.message}` };
         }
     }
     
@@ -66,7 +78,6 @@ document.addEventListener('DOMContentLoaded', () => {
         li.textContent = message;
         li.className = type;
         resultadoList.appendChild(li);
-        // Rola para o final da lista
         resultadoList.scrollTop = resultadoList.scrollHeight;
     }
 
@@ -105,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const resultado = await autenticarConta(email, senha);
             
-            if (isChecking) { // Checa novamente caso o usuário tenha cancelado durante a requisição
+            if (isChecking) {
                 addResult(`${email} -> ${resultado.mensagem}`, resultado.sucesso ? 'sucesso' : 'erro');
                 await new Promise(resolve => setTimeout(resolve, CHECK_DELAY));
             }
