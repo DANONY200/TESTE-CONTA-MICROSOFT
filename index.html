@@ -4,142 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verificador de Contas Minecraft</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f0f0f0;
-        }
-        .container {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            text-align: center;
-            max-width: 500px;
-        }
-        textarea, button {
-            margin: 10px;
-            padding: 8px;
-            width: 90%;
-            max-width: 400px;
-        }
-        button {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-        #resultado {
-            margin-top: 20px;
-            max-height: 300px;
-            overflow-y: auto;
-            text-align: left;
-            border: 1px solid #ddd;
-            padding: 10px;
-            background: #f9f9f9;
-        }
-        .erro { color: red; }
-        .sucesso { color: green; }
-        .aviso { color: orange; font-style: italic; }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <h2>Verificador de Contas Minecraft</h2>
-        <p>Insira as contas (uma por linha, formato: e-mail:senha) para Java Edition.</p>
-        <textarea id="contas" rows="5" placeholder="exemplo: email1@example.com:senha1&#10;email2@example.com:senha2"></textarea>
-        <br>
-        <button onclick="verificarContas()">Verificar Contas</button>
-        <div id="resultado"></div>
-        <p class="aviso">Nota: Usando proxy para burlar CORS. Delay de 1s entre checks para evitar limites.</p>
-    </div>
+    <main class="container">
+        <header>
+            <h1>Verificador de Contas Java</h1>
+            <p>Insira as contas no formato <strong>email:senha</strong>, uma por linha.</p>
+        </header>
 
-    <script>
-        // Função para fazer requisição via proxy CORS
-        async function fetchViaProxy(url, options) {
-            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-            try {
-                const response = await fetch(proxyUrl, options);
-                if (!response.ok) {
-                    throw new Error(`Proxy falhou: ${response.status}`);
-                }
-                return response;
-            } catch (error) {
-                throw new Error(`Erro no proxy: ${error.message}`);
-            }
-        }
+        <textarea id="contas-input" rows="8" placeholder="email1@example.com:senha1&#10;email2@example.com:senha2"></textarea>
+        
+        <div class="button-group">
+            <button id="verificar-btn">▶ Verificar Contas</button>
+            <button id="parar-btn" disabled>■ Parar Verificação</button>
+        </div>
 
-        async function autenticarConta(email, senha) {
-            const originalUrl = "https://authserver.mojang.com/authenticate";
-            const payload = {
-                agent: { name: "Minecraft", version: 1 },
-                username: email,
-                password: senha,
-                requestUser: true
-            };
+        <div id="status" class="status">Aguardando início...</div>
 
-            try {
-                const response = await fetchViaProxy(originalUrl, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
-                });
+        <div class="results-container">
+            <ul id="resultado-list"></ul>
+        </div>
+        
+        <footer>
+            <p>Usa um proxy público para funcionar. Pausa de 1s entre checagens.</p>
+        </footer>
+    </main>
 
-                const text = await response.text();
-                let data;
-                try {
-                    data = JSON.parse(text);
-                } catch {
-                    throw new Error("Resposta inválida da API (não é JSON)");
-                }
-
-                if (response.status === 200) {
-                    const username = data.selectedProfile?.name || "Desconhecido";
-                    const uuid = data.selectedProfile?.id || "N/A";
-                    return { sucesso: true, mensagem: `✅ Conta '${username}' (UUID: ${uuid}) está FUNCIONANDO.` };
-                } else if (response.status === 403) {
-                    return { sucesso: false, mensagem: "❌ Falha: E-mail ou senha incorretos, ou conta bloqueada." };
-                } else {
-                    return { sucesso: false, mensagem: `Erro na API: ${response.status} - ${text.substring(0, 100)}...` };
-                }
-            } catch (error) {
-                return { sucesso: false, mensagem: `Erro de conexão: ${error.message}` };
-            }
-        }
-
-        async function verificarContas() {
-            const contasText = document.getElementById("contas").value.trim();
-            const resultadoDiv = document.getElementById("resultado");
-            resultadoDiv.innerHTML = "Verificando...";
-
-            if (!contasText) {
-                resultadoDiv.innerHTML = '<span class="erro">Insira pelo menos uma conta!</span>';
-                return;
-            }
-
-            const contas = contasText.split('\n').map(line => line.split(':')).filter(([email, senha]) => email && senha);
-            if (contas.length === 0) {
-                resultadoDiv.innerHTML = '<span class="erro">Formato inválido! Use e-mail:senha por linha.</span>';
-                return;
-            }
-
-            resultadoDiv.innerHTML = '';
-            for (const [email, senha] of contas) {
-                resultadoDiv.innerHTML += `<br><strong>Testando ${email.trim()}...</strong>`;
-                await new Promise(resolve => setTimeout(resolve, 1000)); // Delay de 1s para rate limit
-                const resultado = await autenticarConta(email.trim(), senha.trim());
-                resultadoDiv.innerHTML += `<br><span class="${resultado.sucesso ? 'sucesso' : 'erro'}">${resultado.mensagem}</span><br>`;
-            }
-            resultadoDiv.innerHTML += '<br><em>Verificação concluída!</em>';
-        }
-    </script>
+    <script src="script.js" defer></script>
 </body>
 </html>
