@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ##################################################################
     // ##   COLE A URL DO SEU SERVIDOR REPLIT AQUI DENTRO DAS ASPAS    ##
     // ##################################################################
-    const BACKEND_URL = 'https://SUA-URL-PUBLICA-DO-REPLIT.repl.co/verificar';
+    const BACKEND_URL = 'https://e4583359-468d-4394-a9af-040ce71a3c01-00-3lokik9mr70nh.picard.replit.dev';
 
     const startBtn = document.getElementById('start-btn');
     const accountsInput = document.getElementById('accounts-input');
