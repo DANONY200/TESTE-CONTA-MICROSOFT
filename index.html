@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificador de Contas Minecraft</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="container">
+        <header>
+            <h1>Verificador de Recibos Minecraft</h1>
+            <p>Cole sua lista de contas no formato <strong>email:senha</strong> abaixo.</p>
+        </header>
+
+        <div class="input-area">
+            <textarea id="accounts-input" rows="10" placeholder="exemplo1@gmail.com:senha123&#10;exemplo2@hotmail.com:outrasenha456"></textarea>
+        </div>
+
+        <button id="start-btn">▶ Iniciar Verificação</button>
+
+        <div class="status-area">
+            <p id="status-text">Aguardando início...</p>
+        </div>
+
+        <section class="results-area">
+            <h2>Contas Encontradas</h2>
+            <pre id="results-output">Nenhum resultado ainda.</pre>
+        </section>
+    </main>
+    <script src="script.js"></script>
+</body>
+</html>
