@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificador de Contas Minecraft</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        input, button {
+            margin: 10px;
+            padding: 8px;
+            width: 200px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #resultado {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        .erro { color: red; }
+        .sucesso { color: green; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Verificador de Contas Minecraft</h2>
+        <p>Insira o e-mail e a senha da conta (Java Edition).</p>
+        <input type="email" id="email" placeholder="E-mail" required>
+        <br>
+        <input type="password" id="senha" placeholder="Senha" required>
+        <br>
+        <button onclick="verificarConta()">Verificar Conta</button>
+        <div id="resultado"></div>
+    </div>
+
+    <script>
+        async function autenticarConta(email, senha) {
+            const url = "https://authserver.mojang.com/authenticate";
+            const payload = {
+                agent: { name: "Minecraft", version: 1 },
+                username: email,
+                password: senha,
+                requestUser: true
+            };
+
+            try {
+                const response = await fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.status === 200) {
+                    const data = await response.json();
+                    const username = data.selectedProfile?.name || "Desconhecido";
+                    const uuid = data.selectedProfile?.id || "N/A";
+                    return { sucesso: true, mensagem: `✅ Conta '${username}' (UUID: ${uuid}) está FUNCIONANDO.` };
+                } else if (response.status === 403) {
+                    return { sucesso: false, mensagem: "❌ Falha: E-mail ou senha incorretos, ou conta bloqueada." };
+                } else {
+                    return { sucesso: false, mensagem: `Erro na API: ${response.status} - Tente novamente.` };
+                }
+            } catch (error) {
+                return { sucesso: false, mensagem: `Erro de conexão: ${error.message}` };
+            }
+        }
+
+        async function verificarBanMultiplayer(email, senha) {
+            const url = "https://authserver.mojang.com/authenticate";
+            const payload = {
+                agent: { name: "Minecraft", version: 1 },
+                username: email,
+                password: senha
+            };
+
+            try {
+                const response = await fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.status === 200) {
+                    const data = await response.json();
+                    const accessToken = data.accessToken;
+                    const profileId = data.selectedProfile.id;
+                    const sessionUrl = "https://sessionserver.mojang.com/session/minecraft/join";
+                    const payloadSession = { accessToken, selectedProfile: profileId, serverId: "dummy" };
+
+                    const sessionResponse = await fetch(sessionUrl, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payloadSession)
+                    });
+
+                    if (sessionResponse.status === 204) {
+                        return "✅ Conta não parece banida do multiplayer global.";
+                    } else {
+                        return "⚠️ Possível ban no multiplayer ou erro. Teste no jogo.";
+                    }
+                } else {
+                    return "Não foi possível verificar ban: Autenticação falhou.";
+                }
+            } catch (error) {
+                return `Erro ao verificar ban: ${error.message}`;
+            }
+        }
+
+        async function verificarConta() {
+            const email = document.getElementById("email").value;
+            const senha = document.getElementById("senha").value;
+            const resultadoDiv = document.getElementById("resultado");
+
+            if (!email || !senha) {
+                resultadoDiv.innerHTML = '<span class="erro">Por favor, preencha e-mail e senha.</span>';
+                return;
+            }
+
+            resultadoDiv.innerHTML = "Verificando...";
+            const resultado = await autenticarConta(email, senha);
+
+            if (resultado.sucesso) {
+                resultadoDiv.innerHTML = `<span class="sucesso">${resultado.mensagem}</span>`;
+                const banStatus = await verificarBanMultiplayer(email, senha);
+                resultadoDiv.innerHTML += `<br><span class="${banStatus.includes('✅') ? 'sucesso' : 'erro'}">${banStatus}</span>`;
+            } else {
+                resultadoDiv.innerHTML = `<span class="erro">${resultado.mensagem}</span>`;
+            }
+        }
+    </script>
+</body>
+</html>
